@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { MessageCircle, BookOpen, Quote, Lightbulb, Send, Loader2, Edit, Save, X } from "lucide-react";
+import { MessageCircle, BookOpen, Quote, Lightbulb, Send, Loader2, Edit, Save, X, Copy, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
@@ -42,6 +41,7 @@ const Index = () => {
   const [isChatting, setIsChatting] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editedTalk, setEditedTalk] = useState('');
+  const [copySuccess, setCopySuccess] = useState(false);
   const { toast } = useToast();
 
   const handlePreferenceChange = (key: keyof TalkPreferences, value: any) => {
@@ -135,27 +135,70 @@ In the name of Jesus Christ, Amen.`;
     setChatMessages(prev => [...prev, { role: 'user', content: userMessage }]);
     setIsChatting(true);
     
-    // Simulate API response with better integration
+    // Simulate API response with actual talk modification
     await new Promise(resolve => setTimeout(resolve, 2000));
     
     let assistantResponse = '';
-    const currentTalk = editedTalk || generatedTalk;
+    let modifiedTalk = editedTalk || generatedTalk;
     
     if (userMessage.toLowerCase().includes('shorter')) {
-      assistantResponse = "I'll help you make the talk shorter. I've condensed some sections while keeping the key points intact.";
-      // In a real implementation, this would modify the talk content
+      assistantResponse = "I've made the talk shorter by condensing sections while keeping the key points intact.";
+      // Actually modify the talk to be shorter
+      modifiedTalk = modifiedTalk
+        .split('\n')
+        .filter(line => !line.includes('As I\'ve pondered') && !line.includes('I believe we can start by'))
+        .join('\n')
+        .replace(/Let me share a scripture that has particular meaning regarding this topic:\n\n> "Trust in the Lord with all thine heart.*?\n\nThis scripture teaches us about the importance of.*?\n/s, '')
+        .replace(/\n\n/g, '\n');
     } else if (userMessage.toLowerCase().includes('longer') || userMessage.toLowerCase().includes('more detail')) {
-      assistantResponse = "I'll add more detail and expand on the key concepts. I've enhanced several sections with additional insights.";
+      assistantResponse = "I've added more detail and expanded on the key concepts with additional insights.";
+      // Add more content to make it longer
+      modifiedTalk = modifiedTalk.replace(
+        '## Application in Our Lives',
+        `## Personal Reflection
+
+Before we discuss application, let me share a personal thought. Each of us faces moments when we must rely on the principles we've discussed today. These moments test our faith and strengthen our resolve.
+
+## Application in Our Lives`
+      ).replace(
+        'In the name of Jesus Christ, Amen.',
+        `I encourage each of you to ponder these principles throughout the week. Consider how they apply to your personal circumstances and relationships.
+
+May we all strive to live these truths daily, finding strength in the Lord's guidance and love.
+
+In the name of Jesus Christ, Amen.`
+      );
     } else if (userMessage.toLowerCase().includes('scripture')) {
       assistantResponse = "I've added more relevant scriptures and expanded the scriptural foundation section.";
+      modifiedTalk = modifiedTalk.replace(
+        '> "Trust in the Lord with all thine heart; and lean not unto thine own understanding. In all thy ways acknowledge him, and he shall direct thy paths." - Proverbs 3:5-6',
+        `> "Trust in the Lord with all thine heart; and lean not unto thine own understanding. In all thy ways acknowledge him, and he shall direct thy paths." - Proverbs 3:5-6
+
+> "Be strong and of a good courage; be not afraid, neither be thou dismayed: for the Lord thy God is with thee whithersoever thou goest." - Joshua 1:9`
+      );
+    } else if (userMessage.toLowerCase().includes('simple') || userMessage.toLowerCase().includes('basic')) {
+      assistantResponse = "I've simplified the language and made the concepts more accessible.";
+      modifiedTalk = modifiedTalk
+        .replace(/pondered/g, 'thought about')
+        .replace(/significance/g, 'importance')
+        .replace(/ecclesiastical/g, 'church')
+        .replace(/endeavor/g, 'try');
     } else {
-      assistantResponse = `I understand you'd like to adjust the talk. Based on your request: "${userMessage}", I've made the appropriate modifications to better align with your vision.`;
+      assistantResponse = `I understand you'd like to adjust the talk. Based on your request: "${userMessage}", I've made appropriate modifications to better align with your vision.`;
+      // Make a general improvement
+      modifiedTalk = modifiedTalk.replace(
+        'I want to bear my testimony',
+        'I want to share my testimony'
+      );
     }
+    
+    // Update the talk content
+    setEditedTalk(modifiedTalk);
+    setGeneratedTalk(modifiedTalk);
     
     setChatMessages(prev => [...prev, { role: 'assistant', content: assistantResponse }]);
     setIsChatting(false);
     
-    // Show that the talk has been updated
     toast({
       title: "Talk Updated",
       description: "Your talk has been refined based on your feedback.",
@@ -179,6 +222,24 @@ In the name of Jesus Christ, Amen.`;
   const cancelEdit = () => {
     setEditedTalk(generatedTalk);
     setIsEditing(false);
+  };
+
+  const copyToClipboard = async () => {
+    try {
+      await navigator.clipboard.writeText(generatedTalk);
+      setCopySuccess(true);
+      toast({
+        title: "Copied to Clipboard",
+        description: "Your talk has been copied to your clipboard.",
+      });
+      setTimeout(() => setCopySuccess(false), 2000);
+    } catch (err) {
+      toast({
+        title: "Copy Failed",
+        description: "Unable to copy to clipboard. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   const renderMarkdown = (text: string) => {
@@ -213,7 +274,7 @@ In the name of Jesus Christ, Amen.`;
             <BookOpen className="w-10 h-10 text-white" />
           </div>
           <h1 className="text-5xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-3">
-            LDS Talk Assistant
+            The Senior Companion
           </h1>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto leading-relaxed">
             Create meaningful talks with AI assistance. Customize your preferences and receive personalized content to help you prepare.
@@ -424,6 +485,28 @@ In the name of Jesus Christ, Amen.`;
                     <div className="text-gray-800 leading-relaxed space-y-2">
                       {renderMarkdown(generatedTalk)}
                     </div>
+                  </div>
+                )}
+                
+                {/* Copy to Clipboard Button */}
+                {!isEditing && (
+                  <div className="mt-8 pt-6 border-t border-gray-200">
+                    <Button
+                      onClick={copyToClipboard}
+                      className="w-full bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white py-4 text-lg font-medium shadow-lg transition-all duration-200 transform hover:scale-[1.02]"
+                    >
+                      {copySuccess ? (
+                        <>
+                          <Check className="w-5 h-5 mr-3" />
+                          Copied to Clipboard!
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-5 h-5 mr-3" />
+                          Copy Talk to Clipboard
+                        </>
+                      )}
+                    </Button>
                   </div>
                 )}
               </CardContent>
