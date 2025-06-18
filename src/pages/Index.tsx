@@ -270,10 +270,10 @@ In the name of Jesus Christ, Amen.`
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         {/* Header */}
         <div className="text-center mb-12">
-          <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full mb-6 shadow-lg">
+          <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-r from-red-500 to-rose-600 rounded-full mb-6 shadow-lg">
             <BookOpen className="w-10 h-10 text-white" />
           </div>
-          <h1 className="text-5xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-3">
+          <h1 className="text-5xl font-bold bg-gradient-to-r from-red-600 to-rose-600 bg-clip-text text-transparent mb-3">
             The Senior Companion
           </h1>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto leading-relaxed">
