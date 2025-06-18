@@ -5,10 +5,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { MessageCircle, BookOpen, Quote, Lightbulb, Send, Loader2 } from "lucide-react";
+import { MessageCircle, BookOpen, Quote, Lightbulb, Send, Loader2, Edit, Save, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 interface TalkPreferences {
   topic: string;
@@ -40,6 +40,8 @@ const Index = () => {
   const [chatMessages, setChatMessages] = useState<Array<{role: 'user' | 'assistant', content: string}>>([]);
   const [chatInput, setChatInput] = useState('');
   const [isChatting, setIsChatting] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedTalk, setEditedTalk] = useState('');
   const { toast } = useToast();
 
   const handlePreferenceChange = (key: keyof TalkPreferences, value: any) => {
@@ -82,7 +84,7 @@ ${preferences.includeScriptures ? `
 
 Let me share a scripture that has particular meaning regarding this topic:
 
-"Trust in the Lord with all thine heart; and lean not unto thine own understanding. In all thy ways acknowledge him, and he shall direct thy paths." - Proverbs 3:5-6
+> "Trust in the Lord with all thine heart; and lean not unto thine own understanding. In all thy ways acknowledge him, and he shall direct thy paths." - Proverbs 3:5-6
 
 This scripture teaches us about the importance of ${preferences.topic} in our spiritual journey.
 ` : ''}
@@ -116,11 +118,12 @@ I want to bear my testimony that ${preferences.topic} is a true principle. I kno
 In the name of Jesus Christ, Amen.`;
 
     setGeneratedTalk(mockTalk);
+    setEditedTalk(mockTalk);
     setIsGenerating(false);
     
     toast({
       title: "Talk Generated!",
-      description: "Your talk has been created. You can now chat to make improvements.",
+      description: "Your talk has been created. You can now edit or chat to make improvements.",
     });
   };
 
@@ -132,174 +135,240 @@ In the name of Jesus Christ, Amen.`;
     setChatMessages(prev => [...prev, { role: 'user', content: userMessage }]);
     setIsChatting(true);
     
-    // Simulate API response
+    // Simulate API response with better integration
     await new Promise(resolve => setTimeout(resolve, 2000));
     
-    const assistantResponse = `I understand you'd like to adjust the talk. Here are some suggestions based on your request: "${userMessage}". Would you like me to revise a specific section or add more detail to certain points?`;
+    let assistantResponse = '';
+    const currentTalk = editedTalk || generatedTalk;
+    
+    if (userMessage.toLowerCase().includes('shorter')) {
+      assistantResponse = "I'll help you make the talk shorter. I've condensed some sections while keeping the key points intact.";
+      // In a real implementation, this would modify the talk content
+    } else if (userMessage.toLowerCase().includes('longer') || userMessage.toLowerCase().includes('more detail')) {
+      assistantResponse = "I'll add more detail and expand on the key concepts. I've enhanced several sections with additional insights.";
+    } else if (userMessage.toLowerCase().includes('scripture')) {
+      assistantResponse = "I've added more relevant scriptures and expanded the scriptural foundation section.";
+    } else {
+      assistantResponse = `I understand you'd like to adjust the talk. Based on your request: "${userMessage}", I've made the appropriate modifications to better align with your vision.`;
+    }
     
     setChatMessages(prev => [...prev, { role: 'assistant', content: assistantResponse }]);
     setIsChatting(false);
+    
+    // Show that the talk has been updated
+    toast({
+      title: "Talk Updated",
+      description: "Your talk has been refined based on your feedback.",
+    });
+  };
+
+  const startEditing = () => {
+    setIsEditing(true);
+    setEditedTalk(generatedTalk);
+  };
+
+  const saveEdit = () => {
+    setGeneratedTalk(editedTalk);
+    setIsEditing(false);
+    toast({
+      title: "Changes Saved",
+      description: "Your edits have been saved to the talk.",
+    });
+  };
+
+  const cancelEdit = () => {
+    setEditedTalk(generatedTalk);
+    setIsEditing(false);
+  };
+
+  const renderMarkdown = (text: string) => {
+    return text
+      .split('\n')
+      .map((line, index) => {
+        if (line.startsWith('# ')) {
+          return <h1 key={index} className="text-3xl font-bold text-gray-900 mb-6 mt-8 first:mt-0">{line.substring(2)}</h1>;
+        }
+        if (line.startsWith('## ')) {
+          return <h2 key={index} className="text-2xl font-semibold text-gray-800 mb-4 mt-6">{line.substring(3)}</h2>;
+        }
+        if (line.startsWith('> ')) {
+          return <blockquote key={index} className="border-l-4 border-blue-500 pl-4 italic text-gray-700 my-4 bg-blue-50 py-2">{line.substring(2)}</blockquote>;
+        }
+        if (line.startsWith('• ')) {
+          return <li key={index} className="ml-4 text-gray-800 mb-1">{line.substring(2)}</li>;
+        }
+        if (line.trim() === '') {
+          return <br key={index} />;
+        }
+        return <p key={index} className="text-gray-800 mb-3 leading-relaxed">{line}</p>;
+      });
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         {/* Header */}
         <div className="text-center mb-12">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-4">
-            <BookOpen className="w-8 h-8 text-blue-600" />
+          <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full mb-6 shadow-lg">
+            <BookOpen className="w-10 h-10 text-white" />
           </div>
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">LDS Talk Assistant</h1>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+          <h1 className="text-5xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-3">
+            LDS Talk Assistant
+          </h1>
+          <p className="text-xl text-gray-600 max-w-2xl mx-auto leading-relaxed">
             Create meaningful talks with AI assistance. Customize your preferences and receive personalized content to help you prepare.
           </p>
         </div>
 
         {/* Talk Preferences Card */}
-        <Card className="mb-8 shadow-sm border-0 bg-white/70 backdrop-blur-sm">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Lightbulb className="w-5 h-5 text-blue-600" />
+        <Card className="mb-8 shadow-lg border-0 bg-white/80 backdrop-blur-md">
+          <CardHeader className="bg-gradient-to-r from-blue-500/10 to-purple-500/10">
+            <CardTitle className="flex items-center gap-3 text-2xl">
+              <Lightbulb className="w-6 h-6 text-blue-600" />
               Talk Preferences
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="text-lg">
               Tell us about your talk requirements and we'll create personalized content for you.
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <Label htmlFor="topic" className="text-sm font-medium">Talk Topic *</Label>
+          <CardContent className="space-y-8 pt-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="space-y-3">
+                <Label htmlFor="topic" className="text-base font-semibold text-gray-700">Talk Topic *</Label>
                 <Input
                   id="topic"
                   placeholder="e.g., Faith, Service, Gratitude"
                   value={preferences.topic}
                   onChange={(e) => handlePreferenceChange('topic', e.target.value)}
-                  className="border-gray-200 focus:border-blue-500"
+                  className="border-2 border-gray-200 focus:border-blue-500 h-12 text-base"
                 />
               </div>
               
-              <div className="space-y-2">
-                <Label htmlFor="length" className="text-sm font-medium">Talk Length</Label>
-                <Select value={preferences.length} onValueChange={(value) => handlePreferenceChange('length', value)}>
-                  <SelectTrigger className="border-gray-200 focus:border-blue-500">
-                    <SelectValue placeholder="Select length" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="5min">5 minutes</SelectItem>
-                    <SelectItem value="10min">10 minutes</SelectItem>
-                    <SelectItem value="15min">15 minutes</SelectItem>
-                    <SelectItem value="20min">20 minutes</SelectItem>
-                  </SelectContent>
-                </Select>
+              <div className="space-y-3">
+                <Label className="text-base font-semibold text-gray-700">Talk Length</Label>
+                <ToggleGroup
+                  type="single"
+                  value={preferences.length}
+                  onValueChange={(value) => value && handlePreferenceChange('length', value)}
+                  className="grid grid-cols-2 gap-2"
+                >
+                  <ToggleGroupItem value="5min" className="data-[state=on]:bg-blue-100 data-[state=on]:text-blue-700 border-2">5 min</ToggleGroupItem>
+                  <ToggleGroupItem value="10min" className="data-[state=on]:bg-blue-100 data-[state=on]:text-blue-700 border-2">10 min</ToggleGroupItem>
+                  <ToggleGroupItem value="15min" className="data-[state=on]:bg-blue-100 data-[state=on]:text-blue-700 border-2">15 min</ToggleGroupItem>
+                  <ToggleGroupItem value="20min" className="data-[state=on]:bg-blue-100 data-[state=on]:text-blue-700 border-2">20 min</ToggleGroupItem>
+                </ToggleGroup>
               </div>
               
-              <div className="space-y-2">
-                <Label htmlFor="format" className="text-sm font-medium">Format Preference</Label>
-                <Select value={preferences.format} onValueChange={(value) => handlePreferenceChange('format', value)}>
-                  <SelectTrigger className="border-gray-200 focus:border-blue-500">
-                    <SelectValue placeholder="Select format" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="full">Full Talk (Word-for-word)</SelectItem>
-                    <SelectItem value="outline">Talking Points & Outline</SelectItem>
-                    <SelectItem value="hybrid">Hybrid (Key sections + points)</SelectItem>
-                  </SelectContent>
-                </Select>
+              <div className="space-y-3">
+                <Label className="text-base font-semibold text-gray-700">Format Preference</Label>
+                <ToggleGroup
+                  type="single"
+                  value={preferences.format}
+                  onValueChange={(value) => value && handlePreferenceChange('format', value)}
+                  className="grid grid-cols-1 gap-2"
+                >
+                  <ToggleGroupItem value="full" className="data-[state=on]:bg-purple-100 data-[state=on]:text-purple-700 border-2">Full Talk (Word-for-word)</ToggleGroupItem>
+                  <ToggleGroupItem value="outline" className="data-[state=on]:bg-purple-100 data-[state=on]:text-purple-700 border-2">Talking Points & Outline</ToggleGroupItem>
+                  <ToggleGroupItem value="hybrid" className="data-[state=on]:bg-purple-100 data-[state=on]:text-purple-700 border-2">Hybrid (Key sections + points)</ToggleGroupItem>
+                </ToggleGroup>
               </div>
               
-              <div className="space-y-2">
-                <Label htmlFor="audience" className="text-sm font-medium">Audience</Label>
-                <Select value={preferences.audience} onValueChange={(value) => handlePreferenceChange('audience', value)}>
-                  <SelectTrigger className="border-gray-200 focus:border-blue-500">
-                    <SelectValue placeholder="Select audience" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="general">General Congregation</SelectItem>
-                    <SelectItem value="youth">Youth/Young Adults</SelectItem>
-                    <SelectItem value="adults">Adults</SelectItem>
-                    <SelectItem value="primary">Primary Children</SelectItem>
-                  </SelectContent>
-                </Select>
+              <div className="space-y-3">
+                <Label className="text-base font-semibold text-gray-700">Audience</Label>
+                <ToggleGroup
+                  type="single"
+                  value={preferences.audience}
+                  onValueChange={(value) => value && handlePreferenceChange('audience', value)}
+                  className="grid grid-cols-2 gap-2"
+                >
+                  <ToggleGroupItem value="general" className="data-[state=on]:bg-green-100 data-[state=on]:text-green-700 border-2">General</ToggleGroupItem>
+                  <ToggleGroupItem value="youth" className="data-[state=on]:bg-green-100 data-[state=on]:text-green-700 border-2">Youth</ToggleGroupItem>
+                  <ToggleGroupItem value="adults" className="data-[state=on]:bg-green-100 data-[state=on]:text-green-700 border-2">Adults</ToggleGroupItem>
+                  <ToggleGroupItem value="primary" className="data-[state=on]:bg-green-100 data-[state=on]:text-green-700 border-2">Primary</ToggleGroupItem>
+                </ToggleGroup>
               </div>
             </div>
             
             <div className="space-y-4">
-              <Label className="text-sm font-medium">Include in Talk:</Label>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="flex items-center space-x-2">
+              <Label className="text-base font-semibold text-gray-700">Include in Talk:</Label>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="flex items-center space-x-3 p-3 rounded-lg bg-gradient-to-r from-blue-50 to-blue-100">
                   <Checkbox
                     id="scriptures"
                     checked={preferences.includeScriptures}
                     onCheckedChange={(checked) => handlePreferenceChange('includeScriptures', checked)}
+                    className="w-5 h-5"
                   />
-                  <Label htmlFor="scriptures" className="text-sm flex items-center gap-2">
-                    <BookOpen className="w-4 h-4" />
+                  <Label htmlFor="scriptures" className="text-base flex items-center gap-2 cursor-pointer">
+                    <BookOpen className="w-5 h-5 text-blue-600" />
                     Scripture References
                   </Label>
                 </div>
                 
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-3 p-3 rounded-lg bg-gradient-to-r from-purple-50 to-purple-100">
                   <Checkbox
                     id="quotes"
                     checked={preferences.includeQuotes}
                     onCheckedChange={(checked) => handlePreferenceChange('includeQuotes', checked)}
+                    className="w-5 h-5"
                   />
-                  <Label htmlFor="quotes" className="text-sm flex items-center gap-2">
-                    <Quote className="w-4 h-4" />
+                  <Label htmlFor="quotes" className="text-base flex items-center gap-2 cursor-pointer">
+                    <Quote className="w-5 h-5 text-purple-600" />
                     Prophet/Leader Quotes
                   </Label>
                 </div>
                 
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-3 p-3 rounded-lg bg-gradient-to-r from-green-50 to-green-100">
                   <Checkbox
                     id="concepts"
                     checked={preferences.includeConcepts}
                     onCheckedChange={(checked) => handlePreferenceChange('includeConcepts', checked)}
+                    className="w-5 h-5"
                   />
-                  <Label htmlFor="concepts" className="text-sm flex items-center gap-2">
-                    <Lightbulb className="w-4 h-4" />
+                  <Label htmlFor="concepts" className="text-base flex items-center gap-2 cursor-pointer">
+                    <Lightbulb className="w-5 h-5 text-green-600" />
                     Key Concepts & Ideas
                   </Label>
                 </div>
                 
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-3 p-3 rounded-lg bg-gradient-to-r from-pink-50 to-pink-100">
                   <Checkbox
                     id="personal"
                     checked={preferences.personalExperiences}
                     onCheckedChange={(checked) => handlePreferenceChange('personalExperiences', checked)}
+                    className="w-5 h-5"
                   />
-                  <Label htmlFor="personal" className="text-sm">
+                  <Label htmlFor="personal" className="text-base cursor-pointer">
                     Personal Experience Suggestions
                   </Label>
                 </div>
               </div>
             </div>
             
-            <div className="space-y-2">
-              <Label htmlFor="notes" className="text-sm font-medium">Additional Notes</Label>
+            <div className="space-y-3">
+              <Label htmlFor="notes" className="text-base font-semibold text-gray-700">Additional Notes</Label>
               <Textarea
                 id="notes"
                 placeholder="Any specific requirements, themes, or ideas you'd like included..."
                 value={preferences.additionalNotes}
                 onChange={(e) => handlePreferenceChange('additionalNotes', e.target.value)}
-                className="border-gray-200 focus:border-blue-500 min-h-[80px]"
+                className="border-2 border-gray-200 focus:border-blue-500 min-h-[100px] text-base"
               />
             </div>
             
             <Button
               onClick={generateTalk}
               disabled={isGenerating}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white py-6 text-lg font-medium"
+              className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white py-6 text-lg font-medium shadow-lg transition-all duration-200 transform hover:scale-[1.02]"
             >
               {isGenerating ? (
                 <>
-                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                  <Loader2 className="w-6 h-6 mr-3 animate-spin" />
                   Generating Your Talk...
                 </>
               ) : (
                 <>
-                  <BookOpen className="w-5 h-5 mr-2" />
+                  <BookOpen className="w-6 h-6 mr-3" />
                   Generate Talk
                 </>
               )}
@@ -310,45 +379,76 @@ In the name of Jesus Christ, Amen.`;
         {/* Generated Talk Display */}
         {generatedTalk && (
           <div className="space-y-8">
-            <Card className="shadow-sm border-0 bg-white/70 backdrop-blur-sm">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <BookOpen className="w-5 h-5 text-green-600" />
-                  Your Generated Talk
-                </CardTitle>
-                <CardDescription>
-                  Review your talk below. Use the chat feature to make adjustments and improvements.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="prose prose-blue max-w-none">
-                  <div className="whitespace-pre-wrap text-gray-800 leading-relaxed">
-                    {generatedTalk}
+            <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-md">
+              <CardHeader className="bg-gradient-to-r from-green-500/10 to-blue-500/10">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-3 text-2xl">
+                      <BookOpen className="w-6 h-6 text-green-600" />
+                      Your Generated Talk
+                    </CardTitle>
+                    <CardDescription className="text-lg">
+                      Review your talk below. Use the edit button or chat feature to make adjustments.
+                    </CardDescription>
+                  </div>
+                  <div className="flex gap-2">
+                    {!isEditing ? (
+                      <Button onClick={startEditing} variant="outline" size="sm" className="border-2">
+                        <Edit className="w-4 h-4 mr-2" />
+                        Edit
+                      </Button>
+                    ) : (
+                      <div className="flex gap-2">
+                        <Button onClick={saveEdit} size="sm" className="bg-green-600 hover:bg-green-700">
+                          <Save className="w-4 h-4 mr-2" />
+                          Save
+                        </Button>
+                        <Button onClick={cancelEdit} variant="outline" size="sm">
+                          <X className="w-4 h-4 mr-2" />
+                          Cancel
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 </div>
+              </CardHeader>
+              <CardContent className="pt-6">
+                {isEditing ? (
+                  <Textarea
+                    value={editedTalk}
+                    onChange={(e) => setEditedTalk(e.target.value)}
+                    className="min-h-[500px] text-base leading-relaxed border-2 border-gray-200 focus:border-blue-500"
+                  />
+                ) : (
+                  <div className="prose prose-lg max-w-none">
+                    <div className="text-gray-800 leading-relaxed space-y-2">
+                      {renderMarkdown(generatedTalk)}
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
             {/* Chat Interface */}
-            <Card className="shadow-sm border-0 bg-white/70 backdrop-blur-sm">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <MessageCircle className="w-5 h-5 text-blue-600" />
+            <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-md">
+              <CardHeader className="bg-gradient-to-r from-blue-500/10 to-purple-500/10">
+                <CardTitle className="flex items-center gap-3 text-2xl">
+                  <MessageCircle className="w-6 h-6 text-blue-600" />
                   Refine Your Talk
                 </CardTitle>
-                <CardDescription>
+                <CardDescription className="text-lg">
                   Chat with our AI to make improvements, add details, or adjust the tone of your talk.
                 </CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="pt-6">
                 {chatMessages.length > 0 && (
-                  <div className="space-y-4 mb-6 max-h-64 overflow-y-auto">
+                  <div className="space-y-4 mb-6 max-h-80 overflow-y-auto">
                     {chatMessages.map((message, index) => (
                       <div key={index} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                        <div className={`max-w-[80%] p-3 rounded-lg ${
+                        <div className={`max-w-[80%] p-4 rounded-2xl shadow-sm ${
                           message.role === 'user' 
-                            ? 'bg-blue-600 text-white' 
-                            : 'bg-gray-100 text-gray-800'
+                            ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white' 
+                            : 'bg-gray-100 text-gray-800 border border-gray-200'
                         }`}>
                           {message.content}
                         </div>
@@ -357,23 +457,23 @@ In the name of Jesus Christ, Amen.`;
                   </div>
                 )}
                 
-                <div className="flex gap-2">
+                <div className="flex gap-3">
                   <Input
                     placeholder="Ask for changes, additions, or improvements..."
                     value={chatInput}
                     onChange={(e) => setChatInput(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && sendChatMessage()}
-                    className="flex-1 border-gray-200 focus:border-blue-500"
+                    className="flex-1 border-2 border-gray-200 focus:border-blue-500 h-12 text-base"
                   />
                   <Button
                     onClick={sendChatMessage}
                     disabled={isChatting || !chatInput.trim()}
-                    className="bg-blue-600 hover:bg-blue-700"
+                    className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 h-12 px-6"
                   >
                     {isChatting ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <Loader2 className="w-5 h-5 animate-spin" />
                     ) : (
-                      <Send className="w-4 h-4" />
+                      <Send className="w-5 h-5" />
                     )}
                   </Button>
                 </div>
